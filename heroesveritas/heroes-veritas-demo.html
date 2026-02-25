@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Heroes' Veritas — Live Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:    #070D1A;
+  --deep:    #0B1220;
+  --panel:   #0F1A2E;
+  --card:    #162038;
+  --border:  #1E3050;
+  --amber:   #E8A020;
+  --amber2:  #FFB830;
+  --green:   #00E896;
+  --green2:  #00FF9D;
+  --red:     #FF3B4E;
+  --cyan:    #00D4FF;
+  --purple:  #9B6BFF;
+  --text:    #E8EDF5;
+  --dim:     #7A8BA8;
+  --dimmer:  #445570;
+  --gold:    #FFD700;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--navy); color: var(--text); font-family: 'Exo 2', sans-serif; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+
+/* ── SCAN LINE OVERLAY ── */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1000;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+}
+
+/* ── HEADER ── */
+.app-header {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #0A1525 0%, var(--deep) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--amber) 0%, #C07010 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px; color: var(--navy);
+}
+.logo-text { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 1px; color: var(--text); }
+.logo-sub { font-size: 10px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; margin-top: -2px; }
+.header-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); font-family: 'Share Tech Mono', monospace; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── TABS ── */
+.tab-bar {
+  flex-shrink: 0;
+  display: flex; background: var(--deep);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1; padding: 10px 8px; border: none; background: none; cursor: pointer;
+  font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 13px;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim);
+  border-bottom: 2px solid transparent; transition: all 0.2s; position: relative;
+}
+.tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+.tab-btn:not(.active):active { background: rgba(255,255,255,0.04); }
+
+/* ── CONTENT AREA ── */
+.tab-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ══════════════════════════════════════
+   OPERATOR TAB
+══════════════════════════════════════ */
+.op-layout { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Session selector */
+.session-bar {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;
+}
+.session-label { font-size: 10px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+.session-id { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--cyan); }
+.state-pill {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 11px;
+  letter-spacing: 1.5px; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;
+}
+.pill-lobby    { background: rgba(0,212,255,0.15); color: var(--cyan); border: 1px solid rgba(0,212,255,0.3); }
+.pill-running  { background: rgba(0,232,150,0.15); color: var(--green); border: 1px solid rgba(0,232,150,0.3); }
+.pill-completed{ background: rgba(155,107,255,0.15); color: var(--purple); border: 1px solid rgba(155,107,255,0.3); }
+.pill-idle     { background: rgba(122,139,168,0.15); color: var(--dim); border: 1px solid rgba(122,139,168,0.3); }
+.pill-paused   { background: rgba(232,160,32,0.15); color: var(--amber); border: 1px solid rgba(232,160,32,0.3); }
+
+/* Timer bar */
+.timer-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+}
+.timer-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.timer-display { font-family: 'Share Tech Mono', monospace; font-size: 32px; color: var(--amber2); letter-spacing: 2px; }
+.timer-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 2px; }
+.timer-bar-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.timer-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green) 0%, var(--amber) 70%, var(--red) 100%); transition: width 1s linear; }
+
+/* Node graph */
+.nodes-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+}
+.card-title { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.node-list { display: flex; flex-direction: column; gap: 6px; }
+.node-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: 7px; border: 1px solid transparent; transition: all 0.3s;
+}
+.node-row.active  { background: rgba(0,232,150,0.08); border-color: rgba(0,232,150,0.25); }
+.node-row.completed { background: rgba(155,107,255,0.06); border-color: rgba(155,107,255,0.15); }
+.node-row.skipped { background: rgba(155,107,255,0.06); border-color: rgba(155,107,255,0.15); }
+.node-row.locked  { opacity: 0.45; }
+.node-row.available{ background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.2); }
+.node-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.icon-narrative { background: rgba(0,212,255,0.2); }
+.icon-puzzle    { background: rgba(232,160,32,0.2); }
+.icon-combat    { background: rgba(255,59,78,0.2); }
+.icon-reward    { background: rgba(155,107,255,0.2); }
+.node-info { flex: 1; min-width: 0; }
+.node-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node-type { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+.node-badge { font-family: 'Share Tech Mono', monospace; font-size: 10px; padding: 2px 7px; border-radius: 10px; flex-shrink: 0; }
+.badge-active    { background: rgba(0,232,150,0.2); color: var(--green2); }
+.badge-completed { background: rgba(155,107,255,0.2); color: var(--purple); }
+.badge-skipped   { background: rgba(155,107,255,0.2); color: var(--purple); }
+.badge-locked    { background: rgba(70,85,105,0.3); color: var(--dimmer); }
+.badge-available { background: rgba(0,212,255,0.15); color: var(--cyan); }
+
+/* Operator controls */
+.controls-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+}
+.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.op-btn {
+  padding: 10px 8px; border-radius: 8px; border: 1px solid; font-family: 'Rajdhani', sans-serif;
+  font-weight: 700; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.op-btn:active { transform: scale(0.96); }
+.op-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+.op-btn.green  { background: rgba(0,232,150,0.12); border-color: rgba(0,232,150,0.4); color: var(--green2); }
+.op-btn.amber  { background: rgba(232,160,32,0.12); border-color: rgba(232,160,32,0.4); color: var(--amber2); }
+.op-btn.red    { background: rgba(255,59,78,0.12); border-color: rgba(255,59,78,0.4); color: var(--red); }
+.op-btn.cyan   { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.4); color: var(--cyan); }
+.op-btn.purple { background: rgba(155,107,255,0.12); border-color: rgba(155,107,255,0.4); color: var(--purple); }
+.op-btn.full   { grid-column: 1 / -1; }
+
+/* Players row */
+.players-row { display: flex; gap: 8px; }
+.player-card {
+  flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px; text-align: center;
+}
+.player-avatar { width: 28px; height: 28px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: linear-gradient(135deg, var(--amber) 0%, #C07010 100%); color: var(--navy); }
+.player-name { font-size: 10px; color: var(--dim); }
+.player-hp { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--green2); }
+
+/* Telemetry feed */
+.telem-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+}
+.telem-feed { display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+.telem-row { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid rgba(30,48,80,0.5); }
+.telem-time { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--dimmer); flex-shrink: 0; padding-top: 1px; }
+.telem-event { font-size: 11px; color: var(--dim); }
+.telem-event b { color: var(--text); }
+.telem-event.ev-green b { color: var(--green2); }
+.telem-event.ev-amber b { color: var(--amber2); }
+.telem-event.ev-purple b { color: var(--purple); }
+.telem-event.ev-red b { color: var(--red); }
+.telem-event.ev-cyan b { color: var(--cyan); }
+
+/* Toast */
+.toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 900; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.toast {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 16px; font-size: 12px; font-family: 'Rajdhani', sans-serif; font-weight: 600;
+  letter-spacing: 1px; white-space: nowrap; opacity: 0; transform: translateY(10px);
+  transition: all 0.25s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.ok { border-color: rgba(0,232,150,0.5); color: var(--green2); }
+.toast.warn { border-color: rgba(232,160,32,0.5); color: var(--amber2); }
+.toast.err { border-color: rgba(255,59,78,0.5); color: var(--red); }
+
+/* ══════════════════════════════════════
+   INVESTOR TAB
+══════════════════════════════════════ */
+.inv-layout { padding: 12px; display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; }
+
+.inv-hero {
+  background: linear-gradient(135deg, var(--panel) 0%, #0D1E3A 100%);
+  border: 1px solid var(--border); border-radius: 12px; padding: 20px 16px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.inv-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(232,160,32,0.08) 0%, transparent 70%);
+}
+.inv-hero-title { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 2px; color: var(--amber2); position: relative; }
+.inv-hero-sub { font-size: 12px; color: var(--dim); margin-top: 4px; letter-spacing: 1px; position: relative; }
+.inv-hero-tagline { font-size: 15px; color: var(--text); margin-top: 12px; font-weight: 300; line-height: 1.4; position: relative; }
+
+/* KPI grid */
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kpi-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 10px; text-align: center; position: relative; overflow: hidden;
+}
+.kpi-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+}
+.kpi-card.k1::after { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+.kpi-card.k2::after { background: linear-gradient(90deg, transparent, var(--amber), transparent); }
+.kpi-card.k3::after { background: linear-gradient(90deg, transparent, var(--cyan), transparent); }
+.kpi-card.k4::after { background: linear-gradient(90deg, transparent, var(--purple), transparent); }
+.kpi-value { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 28px; line-height: 1; }
+.kpi-card.k1 .kpi-value { color: var(--green2); }
+.kpi-card.k2 .kpi-value { color: var(--amber2); }
+.kpi-card.k3 .kpi-value { color: var(--cyan); }
+.kpi-card.k4 .kpi-value { color: var(--purple); }
+.kpi-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; line-height: 1.3; }
+.kpi-delta { font-size: 10px; margin-top: 3px; color: var(--green2); }
+
+/* Section cards */
+.inv-section {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+}
+.inv-section-title {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 13px;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--amber);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.inv-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Unit economics table */
+.econ-table { width: 100%; border-collapse: collapse; }
+.econ-table td { padding: 7px 4px; font-size: 12px; border-bottom: 1px solid rgba(30,48,80,0.5); }
+.econ-table td:first-child { color: var(--dim); }
+.econ-table td:last-child { text-align: right; font-family: 'Share Tech Mono', monospace; font-size: 13px; }
+.econ-table tr.highlight td { color: var(--green2); font-weight: 600; }
+.econ-table tr.highlight td:first-child { color: var(--green2); }
+.econ-table tr.separator td { border-top: 1px solid var(--border); padding-top: 10px; }
+
+/* Bar chart */
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 8px; }
+.bar-label { font-size: 11px; color: var(--dim); width: 80px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+.bar-value { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--text); width: 36px; text-align: right; flex-shrink: 0; }
+
+/* Completion funnel */
+.funnel { display: flex; flex-direction: column; gap: 6px; }
+.funnel-row { display: flex; align-items: center; gap: 10px; }
+.funnel-label { font-size: 12px; color: var(--text); flex: 1; }
+.funnel-bar-track { width: 100px; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; flex-shrink: 0; }
+.funnel-bar-fill { height: 100%; border-radius: 5px; }
+.funnel-pct { font-family: 'Share Tech Mono', monospace; font-size: 11px; width: 36px; text-align: right; flex-shrink: 0; }
+
+/* Scenario toggle */
+.scenario-bar { display: flex; background: var(--card); border-radius: 8px; padding: 3px; gap: 3px; margin-bottom: 12px; }
+.scenario-btn {
+  flex: 1; padding: 7px 4px; border: none; background: none; border-radius: 6px;
+  font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 11px;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--dim); cursor: pointer; transition: all 0.2s;
+}
+.scenario-btn.active { background: var(--amber); color: var(--navy); }
+
+/* Live session replay */
+.replay-row { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(30,48,80,0.4); }
+.replay-node { flex: 1; font-size: 12px; color: var(--text); }
+.replay-node small { display: block; font-size: 10px; color: var(--dim); }
+.replay-time { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--amber2); }
+.replay-xp { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--green2); }
+
+/* Confirm overlay */
+.confirm-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(7,13,26,0.85);
+  z-index: 800; align-items: center; justify-content: center; padding: 20px;
+}
+.confirm-overlay.open { display: flex; }
+.confirm-box {
+  background: var(--panel); border: 1px solid var(--amber); border-radius: 12px;
+  padding: 20px; max-width: 320px; width: 100%;
+}
+.confirm-title { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px; color: var(--amber); margin-bottom: 8px; }
+.confirm-msg { font-size: 13px; color: var(--dim); line-height: 1.5; margin-bottom: 16px; }
+.confirm-btns { display: flex; gap: 8px; }
+.confirm-btns button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1px; cursor: pointer; }
+.confirm-cancel { background: transparent; border-color: var(--border); color: var(--dim); }
+.confirm-ok { background: rgba(255,59,78,0.15); border-color: rgba(255,59,78,0.5); color: var(--red); }
+
+/* New session overlay */
+.new-session-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(7,13,26,0.85);
+  z-index: 800; align-items: center; justify-content: center; padding: 20px;
+}
+.new-session-overlay.open { display: flex; }
+.new-session-box {
+  background: var(--panel); border: 1px solid var(--green); border-radius: 12px;
+  padding: 20px; max-width: 320px; width: 100%;
+}
+.new-session-title { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px; color: var(--green2); margin-bottom: 12px; }
+.form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.form-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; }
+.form-select {
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-family: 'Exo 2', sans-serif; font-size: 13px; padding: 8px 10px;
+}
+.new-session-btns { display: flex; gap: 8px; margin-top: 14px; }
+.new-session-btns button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1px; cursor: pointer; }
+.ns-cancel { background: transparent; border-color: var(--border); color: var(--dim); }
+.ns-create { background: rgba(0,232,150,0.15); border-color: rgba(0,232,150,0.5); color: var(--green2); }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="logo">
+    <div class="logo-mark">HV</div>
+    <div>
+      <div class="logo-text">HEROES' VERITAS</div>
+      <div class="logo-sub">XR Systems — POC Demo</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">LIVE</span>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('operator')">⚙ Operator</button>
+  <button class="tab-btn" onclick="switchTab('investor')">📊 Investor View</button>
+</div>
+
+<div class="tab-content">
+
+  <!-- ══ OPERATOR TAB ══ -->
+  <div class="tab-pane active" id="tab-operator">
+    <div class="op-layout">
+
+      <!-- Session bar -->
+      <div class="session-bar">
+        <div>
+          <div class="session-label">Active Session</div>
+          <div class="session-id" id="session-id-display">—</div>
+        </div>
+        <div class="state-pill" id="state-pill">—</div>
+      </div>
+
+      <!-- Timer -->
+      <div class="timer-card">
+        <div class="timer-row">
+          <div class="timer-display" id="timer-display">59:59</div>
+          <div class="timer-label">Time Remaining</div>
+        </div>
+        <div class="timer-bar-track">
+          <div class="timer-bar-fill" id="timer-bar" style="width:100%"></div>
+        </div>
+      </div>
+
+      <!-- Players -->
+      <div class="players-row" id="players-row"></div>
+
+      <!-- Node graph -->
+      <div class="nodes-card">
+        <div class="card-title">◈ Node Graph</div>
+        <div class="node-list" id="node-list"></div>
+      </div>
+
+      <!-- Operator controls -->
+      <div class="controls-card">
+        <div class="card-title">◈ Operator Controls</div>
+        <div class="btn-grid">
+          <button class="op-btn green" id="btn-start"   onclick="opAction('start')">▶ Start</button>
+          <button class="op-btn amber" id="btn-pause"   onclick="opAction('pause')">⏸ Pause</button>
+          <button class="op-btn cyan"  id="btn-resume"  onclick="opAction('resume')">▶ Resume</button>
+          <button class="op-btn cyan"  id="btn-bypass"  onclick="opAction('bypass')">⏭ Bypass Node</button>
+          <button class="op-btn amber" id="btn-hint"    onclick="opAction('hint')">💡 Hint</button>
+          <button class="op-btn amber" id="btn-soft"    onclick="opAction('soft_reset')">↩ Soft Reset</button>
+          <button class="op-btn red full" id="btn-hard" onclick="confirmHardReset()">⚠ Hard Reset Session</button>
+          <button class="op-btn red full" id="btn-fail" onclick="confirmForceFail()">✕ Force Fail</button>
+          <button class="op-btn green full" id="btn-new" onclick="openNewSession()">＋ New Session</button>
+        </div>
+      </div>
+
+      <!-- Telemetry -->
+      <div class="telem-card">
+        <div class="card-title">◈ Telemetry Feed</div>
+        <div class="telem-feed" id="telem-feed"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ INVESTOR TAB ══ -->
+  <div class="tab-pane" id="tab-investor">
+    <div class="inv-layout">
+
+      <div class="inv-hero">
+        <div class="inv-hero-title">HEROES' VERITAS</div>
+        <div class="inv-hero-sub">XR Escape Room Platform · POC v1.0</div>
+        <div class="inv-hero-tagline">Server-authoritative VR escape room system with real-time operator control and session analytics</div>
+      </div>
+
+      <!-- Live KPIs -->
+      <div>
+        <div class="card-title" style="padding: 0 2px 8px; font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:2px; color:var(--dim);">◈ SESSION METRICS — LIVE</div>
+        <div class="kpi-grid">
+          <div class="kpi-card k1">
+            <div class="kpi-value" id="kpi-sessions">0</div>
+            <div class="kpi-label">Sessions Run</div>
+            <div class="kpi-delta">↑ this demo</div>
+          </div>
+          <div class="kpi-card k2">
+            <div class="kpi-value" id="kpi-completion">—</div>
+            <div class="kpi-label">Completion Rate</div>
+            <div class="kpi-delta">target: 65%</div>
+          </div>
+          <div class="kpi-card k3">
+            <div class="kpi-value" id="kpi-avgtime">—</div>
+            <div class="kpi-label">Avg Session Time</div>
+            <div class="kpi-delta">60 min capacity</div>
+          </div>
+          <div class="kpi-card k4">
+            <div class="kpi-value" id="kpi-xp">—</div>
+            <div class="kpi-label">Avg XP / Player</div>
+            <div class="kpi-delta">drives retention</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unit Economics -->
+      <div class="inv-section">
+        <div class="inv-section-title">Unit Economics</div>
+        <div class="scenario-bar">
+          <button class="scenario-btn active" onclick="setScenario('conservative')">Conservative</button>
+          <button class="scenario-btn" onclick="setScenario('base')">Base Case</button>
+          <button class="scenario-btn" onclick="setScenario('optimistic')">Optimistic</button>
+        </div>
+        <table class="econ-table" id="econ-table"></table>
+      </div>
+
+      <!-- Throughput by difficulty -->
+      <div class="inv-section">
+        <div class="inv-section-title">Throughput by Difficulty</div>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <div class="bar-label">Easy</div>
+            <div class="bar-track"><div class="bar-fill" style="width:92%; background: var(--green);"></div></div>
+            <div class="bar-value">92%</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Normal</div>
+            <div class="bar-track"><div class="bar-fill" style="width:71%; background: var(--cyan);"></div></div>
+            <div class="bar-value">71%</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Hard</div>
+            <div class="bar-track"><div class="bar-fill" style="width:48%; background: var(--amber);"></div></div>
+            <div class="bar-value">48%</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Nightmare</div>
+            <div class="bar-track"><div class="bar-fill" style="width:22%; background: var(--red);"></div></div>
+            <div class="bar-value">22%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node completion funnel -->
+      <div class="inv-section">
+        <div class="inv-section-title">Node Completion Funnel</div>
+        <div class="funnel" id="funnel"></div>
+      </div>
+
+      <!-- Sample session replay -->
+      <div class="inv-section">
+        <div class="inv-section-title">Session Replay — Last Completed</div>
+        <div id="session-replay"></div>
+      </div>
+
+      <!-- Tech stack -->
+      <div class="inv-section">
+        <div class="inv-section-title">Platform Architecture</div>
+        <table class="econ-table">
+          <tr><td>Backend</td><td>Python · SQLite · Zero dependencies</td></tr>
+          <tr><td>API Layer</td><td>REST (HTTP/1.0) + WebSocket (ws://)</td></tr>
+          <tr><td>Game Client</td><td>Unreal Engine 5.5 (contractor integration)</td></tr>
+          <tr><td>Session State</td><td>Server-authoritative · 9-state machine</td></tr>
+          <tr><td>Economy</td><td>XP · Loot · Levels · Achievements</td></tr>
+          <tr><td>Operator UX</td><td>Real-time dashboard · Full remote control</td></tr>
+          <tr><td>Phase 1A Status</td><td style="color:var(--green2)">✓ Complete · All 56 tests passing</td></tr>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Confirm overlay -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Confirm</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-ok" id="confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- New session overlay -->
+<div class="new-session-overlay" id="new-session-overlay">
+  <div class="new-session-box">
+    <div class="new-session-title">＋ New Session</div>
+    <div class="form-row">
+      <div class="form-label">Difficulty</div>
+      <select class="form-select" id="new-difficulty">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+        <option value="nightmare">Nightmare</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Room</div>
+      <select class="form-select" id="new-room">
+        <option value="room-01">Room 01 — The Emberlight</option>
+        <option value="room-02">Room 02 — The Abyss</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Party Size</div>
+      <select class="form-select" id="new-party">
+        <option value="2">2 Players</option>
+        <option value="4" selected>4 Players</option>
+        <option value="6">6 Players</option>
+      </select>
+    </div>
+    <div class="new-session-btns">
+      <button class="ns-cancel" onclick="closeNewSession()">Cancel</button>
+      <button class="ns-create" onclick="createNewSession()">Create Session</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// DEMO STATE
+// ══════════════════════════════════════════════════════════
+const NODE_DEFS = [
+  { id:'node_intro_narrative_01', name:'The Awakening',           type:'narrative', icon:'📖', duration:180 },
+  { id:'node_puzzle_runes_01',    name:'The Rune Sequence',       type:'puzzle',    icon:'🔮', duration:420 },
+  { id:'node_combat_wave_01',     name:'The First Trial',         type:'combat',    icon:'⚔️', duration:360 },
+  { id:'node_puzzle_spatial_01',  name:'The Altar Alignment',     type:'puzzle',    icon:'🔮', duration:480 },
+  { id:'node_puzzle_search_01',   name:'The Codex Cipher',        type:'puzzle',    icon:'🔮', duration:300 },
+  { id:'node_combat_boss_01',     name:'Keeper of Emberlight',    type:'combat',    icon:'💀', duration:540 },
+  { id:'node_reward_finale_01',   name:'Victory — Emberlight Falls', type:'reward', icon:'✨', duration:60  },
+];
+const TOTAL_SECS = 3600;
+
+let state = {
+  sessionId: null,
+  status: 'idle',  // idle | lobby | running | paused | completed | failed
+  difficulty: 'normal',
+  room: 'room-01',
+  partySize: 4,
+  nodeIndex: -1,
+  nodeStates: {},  // node_id -> 'locked'|'available'|'active'|'completed'|'skipped'
+  timerSecs: TOTAL_SECS,
+  timerRunning: false,
+  hintCounts: {},
+  sessionCount: 0,
+  completedCount: 0,
+  totalXP: 0,
+  totalTime: 0,
+  history: [],  // completed session records
+};
+
+let timerInterval = null;
+let confirmCb = null;
+
+// ── Session ID generator ──
+function genId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+function initSession(difficulty, room, partySize) {
+  if (timerInterval) clearInterval(timerInterval);
+  const id = genId();
+  state.sessionId = id;
+  state.status = 'lobby';
+  state.difficulty = difficulty || 'normal';
+  state.room = room || 'room-01';
+  state.partySize = partySize || 4;
+  state.nodeIndex = -1;
+  state.timerSecs = TOTAL_SECS;
+  state.timerRunning = false;
+  state.hintCounts = {};
+  state.nodeStates = {};
+  NODE_DEFS.forEach((n, i) => {
+    state.nodeStates[n.id] = i === 0 ? 'available' : 'locked';
+  });
+  state.sessionCount++;
+  logEvent(`<b>session_created</b> · ${id.slice(0,8)}… · ${difficulty} · ${room}`, 'ev-cyan');
+  render();
+  toast('Session created — ready to start', 'ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// OPERATOR ACTIONS
+// ══════════════════════════════════════════════════════════
+function opAction(act) {
+  switch(act) {
+    case 'start':
+      if (!['lobby','idle'].includes(state.status)) return;
+      state.status = 'running';
+      state.nodeIndex = 0;
+      NODE_DEFS.forEach((n,i) => state.nodeStates[n.id] = i===0 ? 'active' : 'locked');
+      startTimer();
+      logEvent(`<b>session_started</b> · node: ${NODE_DEFS[0].name}`, 'ev-green');
+      toast('Session started', 'ok');
+      break;
+    case 'pause':
+      if (state.status !== 'running') return;
+      state.status = 'paused';
+      state.timerRunning = false;
+      logEvent('<b>session_paused</b> · timer frozen', 'ev-amber');
+      toast('Session paused', 'warn');
+      break;
+    case 'resume':
+      if (state.status !== 'paused') return;
+      state.status = 'running';
+      state.timerRunning = true;
+      logEvent('<b>session_resumed</b> · timer running', 'ev-green');
+      toast('Session resumed', 'ok');
+      break;
+    case 'bypass':
+      if (!['running','paused'].includes(state.status)) return;
+      if (state.nodeIndex < 0 || state.nodeIndex >= NODE_DEFS.length) return;
+      bypassCurrentNode();
+      return;
+    case 'hint':
+      if (state.status !== 'running') return;
+      if (state.nodeIndex < 0) return;
+      const nid = NODE_DEFS[state.nodeIndex].id;
+      state.hintCounts[nid] = (state.hintCounts[nid] || 0) + 1;
+      const tier = state.hintCounts[nid];
+      logEvent(`<b>hint_delivered</b> · ${NODE_DEFS[state.nodeIndex].name} · tier ${tier}`, 'ev-amber');
+      toast(`Hint tier ${tier} delivered`, 'warn');
+      render();
+      return;
+    case 'soft_reset':
+      if (!['running','paused'].includes(state.status)) return;
+      if (state.nodeIndex < 0) return;
+      const cur = NODE_DEFS[state.nodeIndex];
+      logEvent(`<b>node_soft_reset</b> · ${cur.name}`, 'ev-amber');
+      toast('Node soft reset', 'warn');
+      return;
+  }
+  render();
+}
+
+function bypassCurrentNode() {
+  const node = NODE_DEFS[state.nodeIndex];
+  state.nodeStates[node.id] = 'skipped';
+  logEvent(`<b>node_bypassed</b> · ${node.name} · flags set`, 'ev-amber');
+  advanceToNext();
+}
+
+function advanceToNext() {
+  const next = state.nodeIndex + 1;
+  if (next >= NODE_DEFS.length) {
+    completeSession();
+    return;
+  }
+  state.nodeIndex = next;
+  NODE_DEFS.forEach((n, i) => {
+    if (state.nodeStates[n.id] === 'locked' && i === next) {
+      state.nodeStates[n.id] = 'active';
+    } else if (i === next) {
+      state.nodeStates[n.id] = 'active';
+    }
+  });
+  logEvent(`<b>node_entered</b> · ${NODE_DEFS[next].name}`, 'ev-green');
+  toast(`Now: ${NODE_DEFS[next].name}`, 'ok');
+  render();
+}
+
+function completeSession() {
+  state.status = 'completed';
+  state.timerRunning = false;
+  if (timerInterval) clearInterval(timerInterval);
+  const elapsed = TOTAL_SECS - state.timerSecs;
+  const xpGained = Math.round(800 + Math.random() * 600);
+  state.completedCount++;
+  state.totalXP += xpGained;
+  state.totalTime += elapsed;
+  state.history.push({ id: state.sessionId, difficulty: state.difficulty, elapsed, xp: xpGained, nodes: NODE_DEFS.length });
+  logEvent(`<b>session_completed</b> · ${Math.floor(elapsed/60)}m${elapsed%60}s · +${xpGained} XP`, 'ev-purple');
+  toast(`Session complete! +${xpGained} XP`, 'ok');
+  render();
+  updateInvestorKPIs();
+}
+
+function hardReset() {
+  if (timerInterval) clearInterval(timerInterval);
+  state.status = 'lobby';
+  state.nodeIndex = -1;
+  state.timerSecs = TOTAL_SECS;
+  state.timerRunning = false;
+  state.hintCounts = {};
+  NODE_DEFS.forEach((n, i) => { state.nodeStates[n.id] = i === 0 ? 'available' : 'locked'; });
+  logEvent('<b>session_hard_reset</b> · all flags cleared · back to lobby', 'ev-amber');
+  toast('Hard reset — session in lobby', 'warn');
+  render();
+}
+
+function forceFail() {
+  state.status = 'failed';
+  state.timerRunning = false;
+  if (timerInterval) clearInterval(timerInterval);
+  logEvent('<b>session_force_failed</b> · operator action', 'ev-red');
+  toast('Session force failed', 'err');
+  render();
+}
+
+// ══════════════════════════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════════════════════════
+function startTimer() {
+  state.timerRunning = true;
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (!state.timerRunning) return;
+    if (state.timerSecs <= 0) {
+      forceFail();
+      return;
+    }
+    state.timerSecs--;
+    renderTimer();
+  }, 1000);
+}
+
+function renderTimer() {
+  const m = Math.floor(state.timerSecs / 60);
+  const s = state.timerSecs % 60;
+  const el = document.getElementById('timer-display');
+  if (el) el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const bar = document.getElementById('timer-bar');
+  if (bar) bar.style.width = `${(state.timerSecs / TOTAL_SECS) * 100}%`;
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════
+function render() {
+  renderSessionBar();
+  renderTimer();
+  renderPlayers();
+  renderNodes();
+  renderButtons();
+}
+
+function renderSessionBar() {
+  const id = document.getElementById('session-id-display');
+  const pill = document.getElementById('state-pill');
+  if (!id || !pill) return;
+  id.textContent = state.sessionId ? state.sessionId.slice(0,18) + '…' : '—';
+  pill.textContent = state.status.toUpperCase();
+  pill.className = 'state-pill pill-' + state.status;
+  // header dot
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  if (state.status === 'running') { dot.style.background = 'var(--green)'; dot.style.boxShadow = '0 0 8px var(--green)'; txt.textContent = 'LIVE'; }
+  else if (state.status === 'paused') { dot.style.background = 'var(--amber)'; dot.style.boxShadow = '0 0 8px var(--amber)'; txt.textContent = 'PAUSED'; }
+  else if (state.status === 'completed') { dot.style.background = 'var(--purple)'; dot.style.boxShadow = '0 0 8px var(--purple)'; txt.textContent = 'DONE'; }
+  else if (state.status === 'failed') { dot.style.background = 'var(--red)'; dot.style.boxShadow = '0 0 8px var(--red)'; txt.textContent = 'FAILED'; }
+  else { dot.style.background = 'var(--dim)'; dot.style.boxShadow = 'none'; txt.textContent = 'STANDBY'; }
+}
+
+function renderPlayers() {
+  const row = document.getElementById('players-row');
+  if (!row) return;
+  row.innerHTML = '';
+  const n = state.partySize || 4;
+  for (let i = 1; i <= n; i++) {
+    const hp = state.status === 'failed' ? Math.floor(Math.random()*40+10) : 100;
+    row.innerHTML += `<div class="player-card">
+      <div class="player-avatar">P${i}</div>
+      <div class="player-name">Player ${i}</div>
+      <div class="player-hp">${hp}HP</div>
+    </div>`;
+  }
+}
+
+function renderNodes() {
+  const list = document.getElementById('node-list');
+  if (!list) return;
+  list.innerHTML = '';
+  NODE_DEFS.forEach(node => {
+    const ns = state.nodeStates[node.id] || 'locked';
+    const hints = state.hintCounts[node.id] || 0;
+    const typeClass = 'icon-' + node.type;
+    let badgeClass = 'badge-' + ns;
+    let badgeText = ns.toUpperCase();
+    if (ns === 'active') { badgeClass = 'badge-active'; badgeText = 'ACTIVE'; }
+    let rowClass = 'node-row ' + (ns === 'active' ? 'active' : ns === 'completed' || ns === 'skipped' ? 'completed' : ns === 'available' ? 'available' : 'locked');
+    list.innerHTML += `<div class="${rowClass}">
+      <div class="node-icon ${typeClass}">${node.icon}</div>
+      <div class="node-info">
+        <div class="node-name">${node.name}</div>
+        <div class="node-type">${node.type}${hints > 0 ? ` · ${hints} hint${hints>1?'s':''}` : ''}</div>
+      </div>
+      <div class="node-badge ${badgeClass}">${badgeText}</div>
+    </div>`;
+  });
+}
+
+function renderButtons() {
+  const s = state.status;
+  const running = s === 'running';
+  const paused  = s === 'paused';
+  const lobby   = s === 'lobby' || s === 'idle';
+  const active  = running || paused;
+  const done    = s === 'completed' || s === 'failed';
+  setBtnState('btn-start',  lobby);
+  setBtnState('btn-pause',  running);
+  setBtnState('btn-resume', paused);
+  setBtnState('btn-bypass', active);
+  setBtnState('btn-hint',   running);
+  setBtnState('btn-soft',   active);
+  setBtnState('btn-hard',   !!(state.sessionId) && !lobby);
+  setBtnState('btn-fail',   active);
+  setBtnState('btn-new',    true);
+}
+
+function setBtnState(id, enabled) {
+  const el = document.getElementById(id);
+  if (el) el.disabled = !enabled;
+}
+
+// ══════════════════════════════════════════════════════════
+// TELEMETRY LOG
+// ══════════════════════════════════════════════════════════
+function logEvent(html, cls) {
+  const feed = document.getElementById('telem-feed');
+  if (!feed) return;
+  const now = new Date();
+  const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const row = document.createElement('div');
+  row.className = 'telem-row';
+  row.innerHTML = `<div class="telem-time">${ts}</div><div class="telem-event ${cls||''}">${html}</div>`;
+  feed.insertBefore(row, feed.firstChild);
+  if (feed.children.length > 40) feed.removeChild(feed.lastChild);
+}
+
+// ══════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════
+function toast(msg, type) {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type||'ok'}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  requestAnimationFrame(() => { el.classList.add('show'); });
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 2200);
+}
+
+// ══════════════════════════════════════════════════════════
+// CONFIRM DIALOG
+// ══════════════════════════════════════════════════════════
+function confirmHardReset() {
+  openConfirm('⚠ HARD RESET SESSION',
+    `Wipe all flags, node states, and reset timer. Session returns to lobby. Party: ${state.partySize} players.`,
+    () => hardReset());
+}
+function confirmForceFail() {
+  openConfirm('✕ FORCE FAIL',
+    `Immediately end the session in FAILED state. This is logged and cannot be undone.`,
+    () => forceFail());
+}
+function openConfirm(title, msg, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  confirmCb = cb;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  confirmCb = null;
+}
+document.getElementById('confirm-ok').onclick = () => {
+  const cb = confirmCb;
+  closeConfirm();
+  if (cb) cb();
+};
+
+// ══════════════════════════════════════════════════════════
+// NEW SESSION
+// ══════════════════════════════════════════════════════════
+function openNewSession() {
+  document.getElementById('new-session-overlay').classList.add('open');
+}
+function closeNewSession() {
+  document.getElementById('new-session-overlay').classList.remove('open');
+}
+function createNewSession() {
+  const diff  = document.getElementById('new-difficulty').value;
+  const room  = document.getElementById('new-room').value;
+  const party = parseInt(document.getElementById('new-party').value);
+  closeNewSession();
+  initSession(diff, room, party);
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', (i===0 && tab==='operator') || (i===1 && tab==='investor'));
+  });
+  document.getElementById('tab-operator').classList.toggle('active', tab==='operator');
+  document.getElementById('tab-investor').classList.toggle('active', tab==='investor');
+  if (tab === 'investor') buildInvestorView();
+}
+
+// ══════════════════════════════════════════════════════════
+// INVESTOR VIEW
+// ══════════════════════════════════════════════════════════
+const SCENARIOS = {
+  conservative: {
+    label: 'Conservative',
+    sessions: 4, days: 300, ticket: 28, partySize: 3.5,
+    opex: 180000, capex: 95000,
+  },
+  base: {
+    label: 'Base Case',
+    sessions: 6, days: 320, ticket: 35, partySize: 4,
+    opex: 195000, capex: 95000,
+  },
+  optimistic: {
+    label: 'Optimistic',
+    sessions: 8, days: 340, ticket: 42, partySize: 4.5,
+    opex: 210000, capex: 95000,
+  },
+};
+let currentScenario = 'conservative';
+
+function setScenario(s) {
+  currentScenario = s;
+  document.querySelectorAll('.scenario-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(s === 'base' ? 'base' : s));
+  });
+  renderEconTable();
+}
+
+function renderEconTable() {
+  const sc = SCENARIOS[currentScenario];
+  const annualSessions = sc.sessions * sc.days;
+  const grossRev = annualSessions * sc.partySize * sc.ticket;
+  const platformFee = grossRev * 0.08; // 8% software fee
+  const netRev = grossRev - sc.opex;
+  const roi = ((netRev - sc.capex) / sc.capex * 100).toFixed(0);
+  const payback = (sc.capex / (netRev / 12)).toFixed(1);
+
+  const fmt = (n, prefix='$') => prefix + Math.round(n).toLocaleString();
+
+  document.getElementById('econ-table').innerHTML = `
+    <tr><td>Sessions / day</td><td>${sc.sessions}</td></tr>
+    <tr><td>Operating days / yr</td><td>${sc.days}</td></tr>
+    <tr><td>Avg party size</td><td>${sc.partySize} players</td></tr>
+    <tr><td>Ticket price / player</td><td>${fmt(sc.ticket)}</td></tr>
+    <tr><td>Annual sessions</td><td>${annualSessions.toLocaleString()}</td></tr>
+    <tr class="separator"><td>Gross revenue</td><td>${fmt(grossRev)}</td></tr>
+    <tr><td>Operating costs</td><td style="color:var(--red)">(${fmt(sc.opex)})</td></tr>
+    <tr><td>Platform fee (8%)</td><td style="color:var(--amber)">(${fmt(platformFee)})</td></tr>
+    <tr class="separator highlight"><td>Net revenue / yr</td><td>${fmt(netRev - platformFee)}</td></tr>
+    <tr><td>Initial capex</td><td>${fmt(sc.capex)}</td></tr>
+    <tr class="highlight"><td>ROI (year 1)</td><td>${roi}%</td></tr>
+    <tr class="highlight"><td>Payback period</td><td>${payback} months</td></tr>
+  `;
+}
+
+function buildInvestorView() {
+  renderEconTable();
+  buildFunnel();
+  buildReplay();
+  updateInvestorKPIs();
+}
+
+function buildFunnel() {
+  const funnel = document.getElementById('funnel');
+  if (!funnel) return;
+  const data = [
+    { name: 'Session started', pct: 100, color: 'var(--green)' },
+    { name: 'Node 1 — Narrative', pct: 98, color: 'var(--green)' },
+    { name: 'Node 2 — Rune Puzzle', pct: 87, color: 'var(--cyan)' },
+    { name: 'Node 3 — Combat', pct: 79, color: 'var(--cyan)' },
+    { name: 'Node 4 — Spatial', pct: 71, color: 'var(--amber)' },
+    { name: 'Node 5 — Search', pct: 68, color: 'var(--amber)' },
+    { name: 'Node 6 — Boss', pct: 62, color: 'var(--red)' },
+    { name: 'Session completed', pct: 58, color: 'var(--purple)' },
+  ];
+  funnel.innerHTML = data.map(d => `
+    <div class="funnel-row">
+      <div class="funnel-label">${d.name}</div>
+      <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${d.pct}%; background:${d.color}"></div></div>
+      <div class="funnel-pct" style="color:${d.color}">${d.pct}%</div>
+    </div>`).join('');
+}
+
+function buildReplay() {
+  const el = document.getElementById('session-replay');
+  if (!el) return;
+  const replay = [
+    { name: 'The Awakening',       type:'narrative', time:'00:03:12', xp:'+80' },
+    { name: 'The Rune Sequence',   type:'puzzle',    time:'00:11:44', xp:'+120' },
+    { name: 'The First Trial',     type:'combat',    time:'00:23:07', xp:'+160' },
+    { name: 'The Altar Alignment', type:'puzzle',    time:'00:31:55', xp:'+140' },
+    { name: 'The Codex Cipher',    type:'puzzle',    time:'00:37:22', xp:'+110' },
+    { name: 'Keeper of Emberlight',type:'combat',    time:'00:51:08', xp:'+200' },
+    { name: 'Emberlight Falls',    type:'reward',    time:'00:53:19', xp:'+250' },
+  ];
+  el.innerHTML = replay.map(r => `
+    <div class="replay-row">
+      <div class="replay-node">${r.name}<small>${r.type}</small></div>
+      <div class="replay-time">${r.time}</div>
+      <div class="replay-xp">${r.xp} XP</div>
+    </div>`).join('') + `<div style="margin-top:8px; font-size:11px; color:var(--green2); text-align:right; font-family:'Share Tech Mono',monospace">TOTAL: +1,060 XP · 4 players · Normal</div>`;
+}
+
+function updateInvestorKPIs() {
+  const sessions = document.getElementById('kpi-sessions');
+  const comp = document.getElementById('kpi-completion');
+  const avg  = document.getElementById('kpi-avgtime');
+  const xp   = document.getElementById('kpi-xp');
+  if (sessions) sessions.textContent = state.sessionCount;
+  if (comp) {
+    if (state.sessionCount > 0) {
+      comp.textContent = Math.round((state.completedCount / state.sessionCount) * 100) + '%';
+    } else { comp.textContent = '—'; }
+  }
+  if (avg) {
+    if (state.completedCount > 0) {
+      const avgSecs = Math.round(state.totalTime / state.completedCount);
+      avg.textContent = `${Math.floor(avgSecs/60)}m`;
+    } else { avg.textContent = '—'; }
+  }
+  if (xp) {
+    if (state.completedCount > 0) {
+      avg.textContent = Math.round(state.totalXP / state.completedCount / (state.partySize||4)) + ' XP';
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════
+initSession('normal', 'room-01', 4);
+buildInvestorView();
+logEvent('<b>system_ready</b> · Heroes Veritas POC · all services online', 'ev-cyan');
+</script>
+</body>
+</html>
