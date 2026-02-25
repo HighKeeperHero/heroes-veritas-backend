@@ -1,5 +1,0 @@
-[phases.build]
-cmds = ["python db/seed.py"]
-
-[phases.start]
-cmd = "python operator_api.py"
