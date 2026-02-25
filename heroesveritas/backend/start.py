@@ -1,14 +1,9 @@
 """
-HEROES' VERITAS — Combined startup
-Railway assigns one PORT. REST API uses it.
-WebSocket server uses a fixed internal port (8001) — accessible to UE5.5
-clients that connect directly, and will be wired via Railway's TCP service
-when needed. For POC team testing, only the REST API + dashboard are needed.
+HEROES' VERITAS — Railway entry point
+Runs REST API only. WebSocket server is a separate service.
 """
-
 import os
 import sys
-import threading
 
 _root = os.path.dirname(os.path.abspath(__file__))
 if _root not in sys.path:
@@ -33,20 +28,6 @@ def ensure_seeded():
 
 ensure_seeded()
 
-# WebSocket on fixed port 8001 (internal, not Railway's public PORT)
-WS_PORT = 8001
-
-def start_ws():
-    try:
-        from services.websocket_server import WebSocketServer
-        print(f"  WebSocket server starting on ws://0.0.0.0:{WS_PORT}")
-        WebSocketServer(host="0.0.0.0", port=WS_PORT).start().serve_forever()
-    except Exception as e:
-        print(f"  WebSocket server error: {e}")
-
-ws_thread = threading.Thread(target=start_ws, daemon=True)
-ws_thread.start()
-
-# REST API on Railway's PORT (main thread)
+# Start REST API — reads PORT from environment (Railway sets this to 8080)
 from operator_api import _run_server
 _run_server()

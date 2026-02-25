@@ -416,5 +416,5 @@ def _run_server():
     except KeyboardInterrupt:
         print("\n  Server stopped.")
 
-if __name__ in ("__main__", "operator_api"):
+if __name__ == "__main__":
     _run_server()
