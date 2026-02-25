@@ -801,8 +801,9 @@ def _log_ws_event(event_type: str, session_id, player_id, context: dict):
 # Entry Point
 # ─────────────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+if __name__ in ("__main__", "services.websocket_server"):
+    port = int(os.environ.get("PORT", WS_PORT))
     print("\n  HEROES VERITAS — WebSocket Server")
-    print(f"  ws://localhost:{WS_PORT}\n")
+    print(f"  ws://0.0.0.0:{port}\n")
     print("  Press Ctrl+C to stop.\n")
-    WebSocketServer().start().serve_forever()
+    WebSocketServer(host="0.0.0.0", port=port).start().serve_forever()

@@ -409,8 +409,7 @@ def _run_server():
     print(f"  Dashboard: http://localhost:{PORT}/")
     print(f"  API base:  http://localhost:{PORT}/api/\n")
     print(f"  Press Ctrl+C to stop.\n")
-    port = int(os.environ.get("PORT", PORT))
-    server = HTTPServer(("0.0.0.0", port), DashboardHandler)
+    server = HTTPServer(("localhost", PORT), DashboardHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
