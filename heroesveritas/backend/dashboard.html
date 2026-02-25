@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEROES VERITAS — Operator Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #080c10;
+    --surface:   #0d1319;
+    --border:    #1a2535;
+    --border-hi: #2a3f58;
+    --amber:     #f0a500;
+    --amber-dim: #7a5200;
+    --cyan:      #00d4ff;
+    --cyan-dim:  #004d5e;
+    --green:     #00e676;
+    --green-dim: #003d20;
+    --red:       #ff3d3d;
+    --red-dim:   #4d0000;
+    --yellow:    #ffe066;
+    --text:      #c8d8e8;
+    --text-dim:  #506070;
+    --text-hi:   #eaf4ff;
+    --font-ui:   'Rajdhani', sans-serif;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-hd:   'Orbitron', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.4;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--font-hd);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--amber);
+    text-shadow: 0 0 20px rgba(240,165,0,0.4);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--amber);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 8px var(--amber);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .sys-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  .clock {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr 280px;
+    grid-template-rows: auto;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 56px);
+  }
+
+  .panel {
+    background: var(--bg);
+    padding: 16px;
+    overflow: hidden;
+  }
+
+  /* ── Panel Headers ── */
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-family: var(--font-hd);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--border);
+    color: var(--text-dim);
+    border: 1px solid var(--border-hi);
+  }
+
+  .badge-active { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+  .badge-warn   { background: rgba(255,224,102,0.1); color: var(--yellow); border-color: var(--yellow); }
+  .badge-err    { background: var(--red-dim); color: var(--red); border-color: var(--red); }
+
+  /* ── Session Cards ── */
+  .session-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .session-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .session-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--border-hi);
+    transition: background 0.15s;
+  }
+
+  .session-card:hover { border-color: var(--border-hi); background: #0f1820; }
+  .session-card.selected { border-color: var(--cyan); background: #0a1520; }
+  .session-card.selected::before { background: var(--cyan); }
+
+  .session-card.state-running::before  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .session-card.state-paused::before   { background: var(--yellow); }
+  .session-card.state-completed::before { background: var(--cyan); }
+  .session-card.state-failed::before   { background: var(--red); }
+  .session-card.state-error::before    { background: var(--red); animation: blink 0.5s step-end infinite; }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .session-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .session-id {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .state-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+  }
+
+  .pill-idle       { background: var(--border); color: var(--text-dim); }
+  .pill-lobby      { background: rgba(0,212,255,0.1); color: var(--cyan); border: 1px solid var(--cyan-dim); }
+  .pill-running    { background: var(--green-dim); color: var(--green); border: 1px solid #006040; }
+  .pill-paused     { background: rgba(255,224,102,0.1); color: var(--yellow); }
+  .pill-completed  { background: rgba(0,212,255,0.08); color: var(--cyan); }
+  .pill-failed     { background: var(--red-dim); color: var(--red); }
+  .pill-resetting  { background: rgba(240,165,0,0.1); color: var(--amber); }
+  .pill-error      { background: var(--red-dim); color: var(--red); animation: blink 0.5s step-end infinite; }
+  .pill-node_transition { background: rgba(240,165,0,0.1); color: var(--amber); }
+
+  .session-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .meta-item { display: flex; align-items: center; gap: 4px; }
+  .meta-label { color: var(--text-dim); }
+  .meta-val   { color: var(--text); font-weight: 600; }
+
+  /* ── Timer Bar ── */
+  .timer-bar-wrap {
+    margin-top: 8px;
+    background: var(--border);
+    height: 3px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .timer-bar {
+    height: 100%;
+    background: var(--green);
+    transition: width 1s linear, background 0.3s;
+    border-radius: 2px;
+  }
+
+  /* ── Center Panel — Session Detail ── */
+  .center-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .detail-top {
+    background: var(--bg);
+    padding: 16px 20px;
+    flex-shrink: 0;
+  }
+
+  .detail-bottom {
+    background: var(--bg);
+    padding: 16px 20px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* ── Session Header ── */
+  .session-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .session-title {
+    font-family: var(--font-hd);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-hi);
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .session-subtitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── KPI Row ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .kpi-val {
+    font-family: var(--font-hd);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--amber);
+    display: block;
+    text-shadow: 0 0 12px rgba(240,165,0,0.3);
+    line-height: 1.1;
+  }
+
+  .kpi-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 3px;
+    display: block;
+  }
+
+  /* ── Operator Controls ── */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 10px;
+    border-radius: 3px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.12s;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .btn:hover { filter: brightness(1.3); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; filter: none; }
+
+  .btn-primary  { color: var(--cyan);   border-color: var(--cyan-dim);  background: rgba(0,212,255,0.05); }
+  .btn-success  { color: var(--green);  border-color: var(--green-dim); background: rgba(0,230,118,0.05); }
+  .btn-warn     { color: var(--amber);  border-color: var(--amber-dim); background: rgba(240,165,0,0.05); }
+  .btn-danger   { color: var(--red);    border-color: var(--red-dim);   background: rgba(255,61,61,0.05); }
+  .btn-ghost    { color: var(--text-dim); border-color: var(--border); }
+  .btn-full     { grid-column: span 2; }
+  .btn-span4    { grid-column: span 4; }
+
+  /* ── Node Graph ── */
+  .node-graph {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .node-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: border-color 0.15s;
+  }
+
+  .node-row.active-node   { border-color: var(--amber); background: rgba(240,165,0,0.04); }
+  .node-row.completed-nd  { border-color: var(--green-dim); }
+  .node-row.failed-nd     { border-color: var(--red-dim); }
+  .node-row.skipped-nd    { border-color: var(--cyan-dim); }
+  .node-row.locked-nd     { opacity: 0.4; }
+
+  .node-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: var(--border);
+  }
+
+  .node-icon-puzzle   { border-color: var(--cyan-dim);  background: var(--cyan-dim);  color: var(--cyan);  }
+  .node-icon-combat   { border-color: var(--red-dim);   background: var(--red-dim);   color: var(--red);   }
+  .node-icon-narrative{ border-color: var(--amber-dim); background: var(--amber-dim); color: var(--amber); }
+  .node-icon-reward   { border-color: #3d2d00;          background: #3d2d00;          color: #ffd700;      }
+  .node-icon-transition{ border-color: var(--border-hi); }
+
+  .node-info { flex: 1; min-width: 0; }
+
+  .node-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .node-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .node-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+  .btn-xs {
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 2px;
+    border: 1px solid;
+    cursor: pointer;
+    background: transparent;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+
+  .btn-xs:hover { filter: brightness(1.4); }
+  .btn-xs-bypass { color: var(--amber); border-color: var(--amber-dim); }
+  .btn-xs-hint   { color: var(--cyan);  border-color: var(--cyan-dim);  }
+  .btn-xs-reset  { color: var(--red);   border-color: var(--red-dim);   }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .right-section {
+    background: var(--bg);
+    padding: 14px;
+    overflow: hidden;
+  }
+
+  /* ── Analytics KPIs ── */
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .analytics-kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .analytics-val {
+    font-family: var(--font-hd);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cyan);
+    display: block;
+    text-shadow: 0 0 10px rgba(0,212,255,0.3);
+  }
+
+  .analytics-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 3px;
+    display: block;
+  }
+
+  /* ── Telemetry Feed ── */
+  .tel-feed {
+    max-height: 280px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tel-feed::-webkit-scrollbar { width: 3px; }
+  .tel-feed::-webkit-scrollbar-track { background: var(--border); }
+  .tel-feed::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+  .tel-item {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 2px;
+    animation: slideIn 0.2s ease-out;
+    background: var(--surface);
+    margin-bottom: 1px;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .tel-ts {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    padding-top: 1px;
+  }
+
+  .tel-type {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tel-session_created    { color: var(--cyan); }
+  .tel-node_entered       { color: var(--amber); }
+  .tel-node_completed     { color: var(--green); }
+  .tel-flag_set           { color: #a0cfff; }
+  .tel-hint_used          { color: var(--yellow); }
+  .tel-node_bypassed      { color: var(--red); }
+  .tel-session_completed  { color: var(--green); font-weight: 700; }
+  .tel-session_hard_reset { color: var(--red); }
+  .tel-xp_granted         { color: #c8ff80; }
+  .tel-loot_granted       { color: #ffd700; }
+  .tel-achievement_unlocked { color: #ff9f40; }
+  .tel-level_up           { color: #ff6cff; }
+
+  /* ── Config Panel ── */
+  .config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .config-list::-webkit-scrollbar { width: 3px; }
+  .config-list::-webkit-scrollbar-track { background: var(--border); }
+  .config-list::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+  .config-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  .config-key {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .config-val-input {
+    background: var(--bg);
+    border: 1px solid var(--border-hi);
+    border-radius: 2px;
+    color: var(--amber);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 3px 6px;
+    width: 80px;
+    text-align: right;
+  }
+
+  .config-val-input:focus {
+    outline: none;
+    border-color: var(--amber);
+  }
+
+  .btn-save-cfg {
+    font-size: 9px;
+    padding: 3px 6px;
+    border: 1px solid var(--amber-dim);
+    background: rgba(240,165,0,0.08);
+    color: var(--amber);
+    border-radius: 2px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+
+  .btn-save-cfg:hover { background: rgba(240,165,0,0.2); }
+
+  /* ── Create Session Form ── */
+  .create-form {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .select-input, .text-input {
+    background: var(--surface);
+    border: 1px solid var(--border-hi);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    padding: 6px 8px;
+    flex: 1;
+  }
+
+  .select-input:focus, .text-input:focus {
+    outline: none;
+    border-color: var(--cyan);
+  }
+
+  option { background: var(--surface); }
+
+  /* ── Operator Log ── */
+  .op-log {
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  .op-log-item {
+    display: flex;
+    gap: 8px;
+    padding: 5px 6px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+  }
+
+  .op-log-ts   { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); flex-shrink: 0; }
+  .op-log-type { color: var(--amber); font-weight: 600; flex-shrink: 0; }
+  .op-log-detail { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 9998;
+  }
+
+  .toast {
+    padding: 10px 16px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    border: 1px solid;
+    animation: toastIn 0.2s ease-out;
+    max-width: 320px;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .toast-ok   { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .toast-err  { background: var(--red-dim);   border-color: var(--red);   color: var(--red); }
+  .toast-info { background: var(--cyan-dim);  border-color: var(--cyan);  color: var(--cyan); }
+  .toast-warn { background: rgba(240,165,0,0.1); border-color: var(--amber); color: var(--amber); }
+
+  /* ── Empty State ── */
+  .empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+
+  /* ── Scrollbars ── */
+  .panel { overflow-y: auto; }
+  .panel::-webkit-scrollbar { width: 3px; }
+  .panel::-webkit-scrollbar-track { background: var(--border); }
+  .panel::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+  /* ── Diff tag ── */
+  .diff-tag {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .diff-easy   { background: rgba(0,230,118,0.15); color: var(--green); }
+  .diff-normal { background: rgba(240,165,0,0.15); color: var(--amber); }
+  .diff-hard   { background: rgba(255,61,61,0.15); color: var(--red); }
+
+  /* ── Confirm overlay ── */
+  .confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 9997;
+    align-items: center;
+    justify-content: center;
+  }
+  .confirm-overlay.open { display: flex; }
+
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--red);
+    border-radius: 4px;
+    padding: 24px;
+    max-width: 360px;
+    width: 90%;
+    box-shadow: 0 0 40px rgba(255,61,61,0.2);
+  }
+
+  .confirm-title {
+    font-family: var(--font-hd);
+    font-size: 14px;
+    color: var(--red);
+    margin-bottom: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .confirm-msg {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  /* ── Players strip ── */
+  .players-strip {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .player-pip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  .player-pip-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 4px var(--green);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    HEROES VERITAS &nbsp;/&nbsp; OPERATOR CONTROL
+  </div>
+  <div class="header-right">
+    <div class="sys-status">
+      <div class="status-dot" id="sys-dot"></div>
+      <span id="sys-label">SYSTEMS NOMINAL</span>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: Session List -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Active Sessions</span>
+      <span class="badge" id="session-count-badge">—</span>
+    </div>
+
+    <div class="create-form">
+      <select class="select-input" id="new-difficulty">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+      </select>
+      <select class="select-input" id="new-room">
+        <option value="room-01">Room 01</option>
+        <option value="room-02">Room 02</option>
+        <option value="room-03">Room 03</option>
+        <option value="room-04">Room 04</option>
+      </select>
+    </div>
+    <button class="btn btn-success" style="width:100%;margin-bottom:12px" onclick="createSession()">
+      ＋ NEW SESSION
+    </button>
+
+    <div class="session-list" id="session-list">
+      <div class="empty"><div class="empty-icon">◈</div>No sessions yet</div>
+    </div>
+  </div>
+
+  <!-- CENTER: Session Detail + Node Graph -->
+  <div class="center-panel">
+
+    <div class="detail-top">
+      <div id="no-selection" style="padding:48px 0;text-align:center;color:var(--text-dim);font-family:var(--font-mono);font-size:12px">
+        <div style="font-size:32px;margin-bottom:12px;opacity:0.2">◈</div>
+        SELECT A SESSION TO CONTROL
+      </div>
+
+      <div id="session-detail" style="display:none">
+        <div class="session-header">
+          <div>
+            <div class="session-title" id="det-title">—</div>
+            <div class="session-subtitle" id="det-sub">—</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="diff-tag" id="det-diff">—</span>
+            <span class="state-pill" id="det-state-pill">—</span>
+          </div>
+        </div>
+
+        <div class="players-strip" id="det-players"></div>
+
+        <div class="kpi-row">
+          <div class="kpi"><span class="kpi-val" id="kpi-timer">--:--</span><span class="kpi-label">Time Left</span></div>
+          <div class="kpi"><span class="kpi-val" id="kpi-elapsed">--:--</span><span class="kpi-label">Elapsed</span></div>
+          <div class="kpi"><span class="kpi-val" id="kpi-nodes">—</span><span class="kpi-label">Nodes Done</span></div>
+          <div class="kpi"><span class="kpi-val" id="kpi-flags">—</span><span class="kpi-label">Flags Set</span></div>
+          <div class="kpi"><span class="kpi-val" id="kpi-players">—</span><span class="kpi-label">Players</span></div>
+        </div>
+
+        <!-- Operator Controls -->
+        <div class="controls-grid">
+          <button class="btn btn-success" id="btn-start"   onclick="action('start')">▶ START</button>
+          <button class="btn btn-warn"   id="btn-pause"   onclick="action('pause')">⏸ PAUSE</button>
+          <button class="btn btn-primary" id="btn-resume"  onclick="action('resume')">▶ RESUME</button>
+          <button class="btn btn-ghost"  id="btn-bypass"  onclick="bypassCurrentNode()">⏭ BYPASS NODE</button>
+          <button class="btn btn-warn btn-full" id="btn-soft-reset" onclick="softResetCurrent()">↺ SOFT RESET NODE</button>
+          <button class="btn btn-danger btn-full" id="btn-hard-reset" onclick="confirmHardReset()">⚠ HARD RESET SESSION</button>
+          <button class="btn btn-ghost btn-full" id="btn-hint" onclick="triggerHint()">💡 TRIGGER HINT</button>
+          <button class="btn btn-danger btn-full" id="btn-fail" onclick="confirmForceFail()">✕ FORCE FAIL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Node Graph -->
+    <div class="detail-bottom">
+      <div class="panel-header">
+        <span class="panel-title">Node Graph</span>
+        <span class="badge" id="node-progress-badge">—</span>
+      </div>
+      <div class="node-graph" id="node-graph">
+        <div class="empty"><div class="empty-icon">◈</div>Select a session</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Analytics + Telemetry + Config -->
+  <div class="right-panel">
+
+    <!-- Analytics -->
+    <div class="right-section">
+      <div class="panel-header">
+        <span class="panel-title">Investor Metrics</span>
+        <button class="btn-xs btn-xs-hint" onclick="loadAnalytics()" style="border-color:var(--cyan-dim)">↻</button>
+      </div>
+      <div class="analytics-grid" id="analytics-grid">
+        <div class="analytics-kpi"><span class="analytics-val" id="an-total">—</span><span class="analytics-label">Total Sessions</span></div>
+        <div class="analytics-kpi"><span class="analytics-val" id="an-rate">—%</span><span class="analytics-label">Completion Rate</span></div>
+        <div class="analytics-kpi"><span class="analytics-val" id="an-avgtime">—</span><span class="analytics-label">Avg Time</span></div>
+        <div class="analytics-kpi"><span class="analytics-val" id="an-xp">—</span><span class="analytics-label">Avg XP/Session</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;font-family:var(--font-mono)">DIFFICULTY DISTRIBUTION</div>
+      <div id="diff-dist" style="display:flex;gap:6px;font-size:11px;font-family:var(--font-mono);margin-bottom:4px"></div>
+    </div>
+
+    <!-- Telemetry Feed -->
+    <div class="right-section" style="flex:1">
+      <div class="panel-header">
+        <span class="panel-title">Telemetry Feed</span>
+        <span class="badge" id="tel-count-badge">0 events</span>
+      </div>
+      <div class="tel-feed" id="tel-feed">
+        <div class="empty"><div class="empty-icon">◈</div>Awaiting events…</div>
+      </div>
+    </div>
+
+    <!-- Config Tuning -->
+    <div class="right-section">
+      <div class="panel-header">
+        <span class="panel-title">Live Config</span>
+        <span class="badge badge-warn">No Deploy</span>
+      </div>
+      <div class="config-list" id="config-list">
+        <div class="empty"><div class="empty-icon">◈</div>Loading…</div>
+      </div>
+    </div>
+
+    <!-- Operator Log -->
+    <div class="right-section">
+      <div class="panel-header">
+        <span class="panel-title">Operator Log</span>
+        <span class="badge" id="op-log-badge">—</span>
+      </div>
+      <div class="op-log" id="op-log"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Confirm Overlay -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">CONFIRM ACTION</div>
+    <div class="confirm-msg"   id="confirm-msg">Are you sure?</div>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" onclick="closeConfirm()">CANCEL</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const API = 'http://localhost:8000/api';
+let selectedSessionId = null;
+let pollInterval = null;
+let telLastSeen = 0;
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const r = await fetch(API + path, opts);
+    return await r.json();
+  } catch (e) {
+    return { status: 'error', message: e.message };
+  }
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function fmtTime(secs) {
+  if (!secs && secs !== 0) return '--:--';
+  const m = Math.floor(Math.abs(secs) / 60);
+  const s = Math.abs(secs) % 60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function fmtTS(ts) {
+  if (!ts) return '?';
+  const d = new Date(ts);
+  return d.toTimeString().slice(0,8);
+}
+
+function statePill(state) {
+  return `<span class="state-pill pill-${state}">${state.toUpperCase().replace('_',' ')}</span>`;
+}
+
+function diffTag(d) {
+  return `<span class="diff-tag diff-${d}">${d.toUpperCase()}</span>`;
+}
+
+function nodeIcon(type) {
+  const icons = { puzzle: '◆', combat: '⚔', narrative: '◉', reward: '★', transition: '→' };
+  return `<div class="node-icon node-icon-${type}">${icons[type] || '○'}</div>`;
+}
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Session List ───────────────────────────────────────────────────────────
+
+async function loadSessions() {
+  const r = await api('GET', '/sessions');
+  if (r.status !== 'ok') return;
+  const sessions = r.data;
+
+  document.getElementById('session-count-badge').textContent = `${sessions.length}`;
+
+  const active = sessions.filter(s => ['running','paused','lobby','node_transition'].includes(s.state)).length;
+  const dot = document.getElementById('sys-dot');
+  const lbl = document.getElementById('sys-label');
+  if (active > 0) {
+    dot.style.background = 'var(--green)';
+    dot.style.boxShadow = '0 0 6px var(--green)';
+    lbl.textContent = `${active} SESSION${active > 1 ? 'S' : ''} LIVE`;
+  } else {
+    dot.style.background = 'var(--text-dim)';
+    dot.style.boxShadow = 'none';
+    lbl.textContent = 'STANDBY';
+  }
+
+  const list = document.getElementById('session-list');
+  if (sessions.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">◈</div>No sessions yet</div>';
+    return;
+  }
+
+  list.innerHTML = sessions.map(s => {
+    const elapsed  = s.elapsed_secs || 0;
+    const remain   = s.time_remaining_secs || s.total_duration_secs || 3600;
+    const total    = s.total_duration_secs || 3600;
+    const pct      = Math.max(0, Math.min(100, (remain / total) * 100));
+    const barColor = pct > 40 ? 'var(--green)' : pct > 15 ? 'var(--yellow)' : 'var(--red)';
+    const sel      = s.session_id === selectedSessionId ? ' selected' : '';
+    const sid_short = s.session_id.slice(0,8);
+
+    return `
+    <div class="session-card state-${s.state}${sel}"
+         onclick="selectSession('${s.session_id}')">
+      <div class="session-card-row">
+        <span class="session-id">${sid_short}…</span>
+        ${statePill(s.state)}
+      </div>
+      <div class="session-meta">
+        <span class="meta-item">${diffTag(s.difficulty)}</span>
+        <span class="meta-item">
+          <span class="meta-label">👥</span>
+          <span class="meta-val">${s.player_count}</span>
+        </span>
+        <span class="meta-item">
+          <span class="meta-label">⏱</span>
+          <span class="meta-val">${fmtTime(remain)}</span>
+        </span>
+        ${s.room_id ? `<span class="meta-item"><span class="meta-label">📍</span><span class="meta-val">${s.room_id}</span></span>` : ''}
+      </div>
+      ${s.state === 'running' ? `
+      <div class="timer-bar-wrap">
+        <div class="timer-bar" style="width:${pct}%;background:${barColor}"></div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Session Detail ─────────────────────────────────────────────────────────
+
+async function selectSession(sid) {
+  selectedSessionId = sid;
+  document.getElementById('no-selection').style.display = 'none';
+  document.getElementById('session-detail').style.display = 'block';
+  await refreshDetail();
+  await loadSessions();
+}
+
+async function refreshDetail() {
+  if (!selectedSessionId) return;
+  const r = await api('GET', `/sessions/${selectedSessionId}`);
+  if (r.status !== 'ok') { toast('Failed to load session', 'err'); return; }
+  const s = r.data;
+
+  document.getElementById('det-title').textContent =
+    `SESSION ${s.session_id.slice(0,8).toUpperCase()}`;
+  document.getElementById('det-sub').textContent =
+    `${s.room_id || 'NO ROOM'} · ${s.gameplay_version || '?'} · ${s.config_version || '?'}`;
+  document.getElementById('det-diff').className = `diff-tag diff-${s.difficulty}`;
+  document.getElementById('det-diff').textContent = s.difficulty.toUpperCase();
+
+  const pill = document.getElementById('det-state-pill');
+  pill.className = `state-pill pill-${s.state}`;
+  pill.textContent = s.state.toUpperCase().replace('_',' ');
+
+  // Players
+  const ps = document.getElementById('det-players');
+  ps.innerHTML = (s.players || []).map(p =>
+    `<div class="player-pip">
+      <div class="player-pip-dot" style="background:${p.is_active ? 'var(--green)' : 'var(--red)'}"></div>
+      <span>${p.player_id.slice(-6)}</span>
+      <span style="color:var(--red-dim);font-size:10px">❤${p.health}</span>
+    </div>`
+  ).join('');
+
+  // KPIs
+  document.getElementById('kpi-timer').textContent   = fmtTime(s.time_remaining_secs);
+  document.getElementById('kpi-elapsed').textContent = fmtTime(s.elapsed_secs);
+  document.getElementById('kpi-flags').textContent   = (s.flags || []).length;
+  document.getElementById('kpi-players').textContent = (s.players || []).length;
+
+  const doneNodes = (s.node_states || []).filter(n =>
+    ['completed','skipped'].includes(n.state)).length;
+  const totalNodes = (s.node_states || []).length;
+  document.getElementById('kpi-nodes').textContent = `${doneNodes}/${totalNodes}`;
+  document.getElementById('node-progress-badge').textContent = `${doneNodes}/${totalNodes} nodes`;
+
+  // Update button states
+  updateButtons(s.state);
+
+  // Node graph
+  renderNodeGraph(s);
+}
+
+function updateButtons(state) {
+  const btns = {
+    'btn-start':      ['idle','lobby'],
+    'btn-pause':      ['running'],
+    'btn-resume':     ['paused'],
+    'btn-bypass':     ['running','paused','node_transition'],
+    'btn-soft-reset': ['running','paused'],
+    'btn-hard-reset': ['idle','lobby','running','paused','completed','failed','error'],
+    'btn-hint':       ['running'],
+    'btn-fail':       ['running','paused'],
+  };
+  for (const [id, allowed] of Object.entries(btns)) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !allowed.includes(state);
+  }
+}
+
+function renderNodeGraph(session) {
+  const nodes = session.node_states || [];
+  const currentNodeId = session.current_node_id;
+  const graph = document.getElementById('node-graph');
+  if (nodes.length === 0) {
+    graph.innerHTML = '<div class="empty"><div class="empty-icon">◈</div>No nodes</div>';
+    return;
+  }
+
+  graph.innerHTML = nodes.map(n => {
+    const isCurrent = n.node_id === currentNodeId;
+    let rowClass = 'node-row';
+    if (isCurrent) rowClass += ' active-node';
+    else if (n.state === 'completed') rowClass += ' completed-nd';
+    else if (n.state === 'skipped')   rowClass += ' skipped-nd';
+    else if (n.state === 'failed')    rowClass += ' failed-nd';
+    else if (n.state === 'locked')    rowClass += ' locked-nd';
+
+    const stateColors = {
+      completed: 'var(--green)', skipped: 'var(--cyan)',
+      in_progress: 'var(--amber)', failed: 'var(--red)',
+      available: 'var(--text-dim)', locked: 'var(--border)'
+    };
+
+    const canAct = ['in_progress','available','locked'].includes(n.state) &&
+                   ['running','paused'].includes(session.state);
+
+    return `
+    <div class="${rowClass}">
+      ${nodeIcon(n.node_type)}
+      <div class="node-info">
+        <div class="node-name">${n.display_name}</div>
+        <div class="node-meta">
+          ${n.node_type.toUpperCase()} ·
+          <span style="color:${stateColors[n.state] || 'var(--text-dim)'}">
+            ${n.state.toUpperCase().replace('_',' ')}
+          </span>
+          · attempts: ${n.attempts || 0} · hints: ${n.hints_used || 0}
+        </div>
+      </div>
+      <div class="node-actions">
+        ${canAct ? `
+          <button class="btn-xs btn-xs-bypass"
+            onclick="bypassNode('${n.node_id}')">BYPASS</button>
+          <button class="btn-xs btn-xs-hint"
+            onclick="hintNode('${n.node_id}')">HINT</button>
+          ${n.state !== 'locked' ? `
+          <button class="btn-xs btn-xs-reset"
+            onclick="softResetNode('${n.node_id}')">RESET</button>` : ''}
+        ` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Operator Actions ───────────────────────────────────────────────────────
+
+async function action(act, extra = {}) {
+  if (!selectedSessionId) { toast('No session selected', 'warn'); return; }
+  const r = await api('POST', `/sessions/${selectedSessionId}/action/${act}`, extra);
+  if (r.status === 'ok') {
+    toast(`${act.toUpperCase()} — OK`, 'ok');
+    await refreshDetail();
+    await loadSessions();
+    await loadOperatorLog();
+  } else {
+    toast(r.message || 'Action failed', 'err');
+  }
+}
+
+async function bypassCurrentNode() {
+  if (!selectedSessionId) return;
+  const r = await api('GET', `/sessions/${selectedSessionId}`);
+  if (r.status !== 'ok') return;
+  const nodeId = r.data.current_node_id;
+  if (!nodeId) { toast('No active node to bypass', 'warn'); return; }
+  await action('bypass_node', { node_id: nodeId });
+}
+
+async function bypassNode(nodeId) {
+  await action('bypass_node', { node_id: nodeId });
+}
+
+async function hintNode(nodeId) {
+  await action('trigger_hint', { node_id: nodeId });
+}
+
+async function triggerHint() {
+  if (!selectedSessionId) return;
+  const r = await api('GET', `/sessions/${selectedSessionId}`);
+  if (r.status !== 'ok') return;
+  const nodeId = r.data.current_node_id;
+  if (!nodeId) { toast('No active node for hint', 'warn'); return; }
+  await action('trigger_hint', { node_id: nodeId });
+}
+
+async function softResetNode(nodeId) {
+  await action('soft_reset_node', { node_id: nodeId });
+}
+
+async function softResetCurrent() {
+  if (!selectedSessionId) return;
+  const r = await api('GET', `/sessions/${selectedSessionId}`);
+  if (r.status !== 'ok') return;
+  const nodeId = r.data.current_node_id;
+  if (!nodeId) { toast('No active node to reset', 'warn'); return; }
+  await action('soft_reset_node', { node_id: nodeId });
+}
+
+// Confirm dialogs
+let confirmCallback = null;
+
+function openConfirm(title, msg, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  confirmCallback = cb;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  confirmCallback = null;
+}
+
+document.getElementById('confirm-ok-btn').onclick = async () => {
+  const cb = confirmCallback;  // capture before closeConfirm nulls it
+  closeConfirm();
+  if (cb) await cb();
+};
+
+function confirmHardReset() {
+  openConfirm(
+    '⚠ CONFIRM HARD RESET',
+    `This will wipe ALL session state, flags, and node progress. This action is logged and cannot be undone. Session: ${(selectedSessionId || '').slice(0,8)}…`,
+    () => action('hard_reset')
+  );
+}
+
+function confirmForceFail() {
+  openConfirm(
+    '✕ CONFIRM FORCE FAIL',
+    `Force the session into FAILED state. Players will see the fail screen. Session: ${(selectedSessionId || '').slice(0,8)}…`,
+    () => action('force_fail')
+  );
+}
+
+async function createSession() {
+  const diff = document.getElementById('new-difficulty').value;
+  const room = document.getElementById('new-room').value;
+  const r = await api('POST', '/sessions', { difficulty: diff, room_id: room });
+  if (r.status === 'ok') {
+    toast(`Session created — ${diff.toUpperCase()} · ${room}`, 'ok');
+    await loadSessions();
+    selectSession(r.data.session_id);
+  } else {
+    toast(r.message || 'Create failed', 'err');
+  }
+}
+
+// ── Analytics ──────────────────────────────────────────────────────────────
+
+async function loadAnalytics() {
+  const r = await api('GET', '/analytics');
+  if (r.status !== 'ok') return;
+  const d = r.data;
+
+  document.getElementById('an-total').textContent   = d.total_sessions ?? '—';
+  document.getElementById('an-rate').textContent    = `${d.completion_rate ?? '—'}%`;
+
+  const mins = d.avg_completion_secs ? Math.round(d.avg_completion_secs / 60) : null;
+  document.getElementById('an-avgtime').textContent = mins ? `${mins}m` : '—';
+  document.getElementById('an-xp').textContent      = d.avg_xp_per_session ?? '—';
+
+  // Difficulty distribution
+  const dd = d.difficulty_distribution || {};
+  const total = Object.values(dd).reduce((a, b) => a + b, 0) || 1;
+  document.getElementById('diff-dist').innerHTML = Object.entries(dd).map(([k, v]) =>
+    `<span class="diff-tag diff-${k}">${k.toUpperCase()} ${v} (${Math.round(v/total*100)}%)</span>`
+  ).join('');
+}
+
+// ── Telemetry ──────────────────────────────────────────────────────────────
+
+async function loadTelemetry() {
+  const r = await api('GET', '/telemetry?limit=80');
+  if (r.status !== 'ok') return;
+  const events = r.data;
+
+  document.getElementById('tel-count-badge').textContent = `${events.length} events`;
+
+  const feed = document.getElementById('tel-feed');
+  if (events.length === 0) {
+    feed.innerHTML = '<div class="empty"><div class="empty-icon">◈</div>Awaiting events…</div>';
+    return;
+  }
+
+  feed.innerHTML = events.slice(0, 60).map(e => {
+    const ts = fmtTS(e.ts);
+    const sid = e.session_id ? e.session_id.slice(0,6) : '——';
+    return `
+    <div class="tel-item">
+      <span class="tel-ts">${ts}</span>
+      <span class="tel-type tel-${e.event_type}">${e.event_type}
+        <span style="color:var(--text-dim);font-size:9px"> · ${sid}</span>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+// ── Config ─────────────────────────────────────────────────────────────────
+
+const CONFIG_SHOW_KEYS = [
+  'xp.base_node_puzzle', 'xp.base_node_combat', 'xp.time_bonus_per_min',
+  'xp.daily_cap', 'xp.repeat_decay_factor',
+  'session.duration_secs', 'session.max_players',
+  'economy.xp_event_multiplier', 'economy.reward_boost_active',
+];
+
+async function loadConfig() {
+  const r = await api('GET', '/config');
+  if (r.status !== 'ok') return;
+  const cfg = r.data;
+
+  const shown = CONFIG_SHOW_KEYS.filter(k => cfg[k]);
+
+  document.getElementById('config-list').innerHTML = shown.map(key => {
+    const item = cfg[key];
+    const val  = item.value || '';
+    return `
+    <div class="config-row">
+      <span class="config-key" title="${item.description || ''}">${key}</span>
+      <input class="config-val-input" id="cfg-${key.replace(/\./g,'-')}"
+             value="${val}" type="text">
+      <button class="btn-save-cfg" onclick="saveConfig('${key}')">SAVE</button>
+    </div>`;
+  }).join('');
+}
+
+async function saveConfig(key) {
+  const inputId = 'cfg-' + key.replace(/\./g, '-');
+  const val = document.getElementById(inputId)?.value;
+  if (val === undefined) return;
+  let parsed;
+  try { parsed = JSON.parse(val); } catch { parsed = val; }
+  const r = await api('POST', '/config', { config_key: key, config_value: parsed });
+  if (r.status === 'ok') {
+    toast(`Config updated: ${key}`, 'ok');
+  } else {
+    toast(r.message || 'Config save failed', 'err');
+  }
+}
+
+// ── Operator Log ───────────────────────────────────────────────────────────
+
+async function loadOperatorLog() {
+  const r = await api('GET', '/operator-log?limit=20');
+  if (r.status !== 'ok') return;
+  const items = r.data;
+  document.getElementById('op-log-badge').textContent = `${items.length}`;
+  const log = document.getElementById('op-log');
+  if (items.length === 0) {
+    log.innerHTML = '<div class="empty" style="padding:12px">No actions yet</div>';
+    return;
+  }
+  log.innerHTML = items.map(item => {
+    const payload = (() => {
+      try {
+        const p = JSON.parse(item.payload_json || '{}');
+        return p.node_id || p.flag_id || '';
+      } catch { return ''; }
+    })();
+    return `
+    <div class="op-log-item">
+      <span class="op-log-ts">${fmtTS(item.ts)}</span>
+      <span class="op-log-type">${item.action_type}</span>
+      <span class="op-log-detail">${payload}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Auto-refresh ───────────────────────────────────────────────────────────
+
+async function fullRefresh() {
+  await Promise.all([
+    loadSessions(),
+    loadTelemetry(),
+    loadAnalytics(),
+  ]);
+  if (selectedSessionId) await refreshDetail();
+  await loadOperatorLog();
+}
+
+// Initial load
+fullRefresh();
+loadConfig();
+
+// Poll every 3 seconds
+setInterval(fullRefresh, 3000);
+</script>
+</body>
+</html>
