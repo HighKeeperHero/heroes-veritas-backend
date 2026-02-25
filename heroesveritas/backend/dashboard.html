@@ -992,7 +992,7 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-const API = 'http://localhost:8000/api';
+const API = window.location.origin + '/api';
 let selectedSessionId = null;
 let pollInterval = null;
 let telLastSeen = 0;
