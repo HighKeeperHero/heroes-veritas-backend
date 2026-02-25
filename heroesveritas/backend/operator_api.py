@@ -404,12 +404,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 def _run_server():
     ensure_operator()
+    port = int(os.environ.get("PORT", PORT))
     print(f"\n  HEROES VERITAS — Operator API Server")
-    print(f"  Running at http://localhost:{PORT}")
-    print(f"  Dashboard: http://localhost:{PORT}/")
-    print(f"  API base:  http://localhost:{PORT}/api/\n")
+    print(f"  Running at http://0.0.0.0:{port}")
+    print(f"  Dashboard: http://0.0.0.0:{port}/")
+    print(f"  API base:  http://0.0.0.0:{port}/api/\n")
     print(f"  Press Ctrl+C to stop.\n")
-    server = HTTPServer(("localhost", PORT), DashboardHandler)
+    server = HTTPServer(("0.0.0.0", port), DashboardHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
